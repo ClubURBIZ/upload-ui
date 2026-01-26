@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Upload → Embeddings</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 40px; }
+    .box { max-width: 720px; margin: 0 auto; }
+    .drop {
+      border: 2px dashed #999; border-radius: 16px; padding: 40px; text-align: center;
+      transition: 0.15s; user-select: none;
+    }
+    .drop.dragover { border-color: #111; background: #f5f5f5; }
+    .row { display: flex; gap: 12px; margin-top: 16px; align-items: center; flex-wrap: wrap; }
+    button { padding: 10px 14px; border-radius: 12px; border: 1px solid #111; background: #111; color: #fff; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    input[type="file"] { display: none; }
+    .meta { color: #555; margin-top: 10px; }
+    .status { margin-top: 14px; white-space: pre-wrap; }
+    .small { font-size: 13px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Upload → Embeddings</h1>
+    <p class="small">Dépose un fichier. n8n le réceptionne et lance l’automatisation.</p>
+
+    <div id="drop" class="drop">
+      <strong>Glisse-dépose ici</strong><br/>
+      <span class="small">ou</span><br/>
+      <label for="file" style="text-decoration: underline; cursor:pointer;">sélectionne un fichier</label>
+      <input id="file" type="file" />
+    </div>
+
+    <div class="row">
+      <button id="send" disabled>Envoyer</button>
+      <span id="filename" class="meta">Aucun fichier sélectionné</span>
+    </div>
+
+    <div id="status" class="status"></div>
+    <p class="small">Champ upload attendu par n8n : <code>data</code></p>
+  </div>
+
+<script>
+  // 1) Mets ici l'URL PRODUCTION de ton webhook n8n
+  const WEBHOOK_URL = "https://n8n.trajectoire-freelance.fr/webhook/TON_ID_ICI";
+
+  // 2) Option sécurité simple (recommandée) : token dans l’URL
+  // const WEBHOOK_URL = "https://n8n.../webhook/TON_ID_ICI?token=TON_TOKEN";
+
+  const drop = document.getElementById("drop");
+  const fileInput = document.getElementById("file");
+  const sendBtn = document.getElementById("send");
+  const filename = document.getElementById("filename");
+  const statusEl = document.getElementById("status");
+
+  let currentFile = null;
+
+  function setFile(f) {
+    currentFile = f;
+    sendBtn.disabled = !currentFile;
+    filename.textContent = currentFile ? `${currentFile.name} (${Math.round(currentFile.size/1024)} KB)` : "Aucun fichier sélectionné";
+    statusEl.textContent = "";
+  }
+
+  drop.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    drop.classList.add("dragover");
+  });
+  drop.addEventListener("dragleave", () => drop.classList.remove("dragover"));
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    drop.classList.remove("dragover");
+    const f = e.dataTransfer.files?.[0];
+    if (f) setFile(f);
+  });
+
+  fileInput.addEventListener("change", () => {
+    const f = fileInput.files?.[0];
+    if (f) setFile(f);
+  });
+
+  sendBtn.addEventListener("click", async () => {
+    if (!currentFile) return;
+
+    sendBtn.disabled = true;
+    statusEl.textContent = "Envoi en cours…";
+
+    const form = new FormData();
+    // IMPORTANT : le champ doit s’appeler "data" (comme ton Webhook n8n)
+    form.append("data", currentFile, currentFile.name);
+
+    try {
+      const res = await fetch(WEBHOOK_URL, { method: "POST", body: form });
+      const text = await res.text().catch(() => "");
+      if (!res.ok) throw new Error(`HTTP ${res.status}\n${text}`);
+      statusEl.textContent = "✅ Reçu par n8n. Automatisation lancée.";
+    } catch (err) {
+      statusEl.textContent = "❌ Échec d’envoi.\n" + (err?.message || err);
+    } finally {
+      sendBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
