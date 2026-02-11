@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Upload CV</title>
+  </head>
+
+  <body>
+    <h1>Upload CV (PDF)</h1>
+
+    <form
+      action="https://n8n.trajectoire-freelance.fr/webhook-test/cv_upload"
+      method="post"
+      enctype="multipart/form-data"
+    >
+      <input type="file" name="data" accept="application/pdf" required />
+      <br><br>
+      <button type="submit">Envoyer</button>
+    </form>
+  </body>
+</html>
